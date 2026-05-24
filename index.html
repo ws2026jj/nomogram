@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>列线图临床预测模型计算器</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f5f5f5; color: #1a1a1a; padding: 2rem 1rem; }
+  .calc-wrap { max-width: 660px; margin: 0 auto; background: #fff; border-radius: 12px; padding: 2rem; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+  h1 { font-size: 18px; font-weight: 500; margin-bottom: 0.4rem; }
+  .subtitle { font-size: 13px; color: #888; margin-bottom: 1.5rem; }
+  .section-label { font-size: 12px; color: #aaa; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; margin: 0 0 1rem; }
+  .field-group { margin-bottom: 1.2rem; }
+  .field-header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 8px; }
+  .field-label { font-size: 15px; font-weight: 500; color: #1a1a1a; display: flex; align-items: center; gap: 6px; }
+  .field-label span.unit { font-size: 12px; color: #bbb; font-weight: 400; }
+  .score-pill { font-size: 12px; font-weight: 600; background: #f0f4ff; color: #1a6fc4; border-radius: 99px; padding: 2px 10px; min-width: 70px; text-align: center; }
+  .toggle-row { display: flex; gap: 8px; }
+  .toggle-btn { flex: 1; padding: 10px 0; border-radius: 8px; border: 1px solid #ddd; background: #fff; font-size: 14px; color: #888; cursor: pointer; transition: all 0.15s; }
+  .toggle-btn.active { background: #EBF3FF; color: #1a6fc4; border-color: transparent; font-weight: 500; }
+  .slider-row { display: flex; align-items: center; gap: 12px; }
+  .slider-row input[type=range] { flex: 1; height: 4px; cursor: pointer; accent-color: #1a6fc4; }
+  .slider-val { font-size: 15px; font-weight: 500; min-width: 48px; text-align: right; color: #1a1a1a; }
+
+  .score-table-wrap { background: #f8f9fc; border-radius: 10px; padding: 1rem 1.25rem; margin-bottom: 1rem; }
+  .score-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .score-table th { color: #aaa; font-weight: 600; font-size: 11px; letter-spacing: 0.05em; text-transform: uppercase; padding: 0 0 8px; text-align: left; border-bottom: 1px solid #e2e5ec; }
+  .score-table th.right { text-align: right; }
+  .score-table td { padding: 7px 0; color: #1a1a1a; vertical-align: middle; border-bottom: 1px solid #eff0f4; }
+  .score-table tr:last-child td { border-bottom: none; }
+  .score-table td.right { text-align: right; font-weight: 600; color: #1a6fc4; }
+  .bar-cell { width: 120px; padding: 7px 12px 7px 8px !important; }
+  .bar-bg { height: 5px; background: #e2e5ec; border-radius: 3px; overflow: hidden; position: relative; }
+  .bar-fill { height: 100%; border-radius: 3px; background: #1a6fc4; transition: width 0.35s ease; position: absolute; top: 0; }
+  .bar-base { height: 100%; background: #d0d9f0; border-radius: 3px 0 0 3px; position: absolute; top: 0; left: 0; }
+  .total-row td { font-weight: 700 !important; font-size: 14px !important; border-top: 1.5px solid #d0d4e0 !important; border-bottom: none !important; padding-top: 10px !important; color: #1a1a1a !important; }
+  .total-row td.right { color: #1a6fc4 !important; font-size: 16px !important; }
+  .total-sub { font-size: 11px; color: #aaa; font-weight: 400; }
+
+  .result-card { background: #f8f8f8; border-radius: 12px; padding: 1.25rem 1.5rem; display: flex; align-items: center; gap: 1.5rem; margin-bottom: 1rem; }
+  .prob-big { font-size: 42px; font-weight: 500; color: #1a1a1a; line-height: 1; }
+  .prob-label { font-size: 13px; color: #888; margin-top: 4px; }
+  .risk-badge { padding: 5px 14px; border-radius: 99px; font-size: 13px; font-weight: 500; display: inline-block; }
+  .risk-low  { background: #e6f4ea; color: #2e7d32; }
+  .risk-mid  { background: #fff8e1; color: #f57c00; }
+  .risk-high { background: #fce8e8; color: #c62828; }
+  .result-right { flex: 1; }
+  .detail-row { font-size: 13px; color: #888; margin-top: 8px; display: flex; gap: 8px; flex-wrap: wrap; }
+  .detail-chip { background: #fff; border: 1px solid #eee; border-radius: 6px; padding: 3px 10px; }
+  .logit-bar-wrap { margin-top: 10px; height: 6px; background: #e0e0e0; border-radius: 3px; overflow: hidden; }
+  .logit-bar { height: 100%; border-radius: 3px; transition: width 0.4s ease; }
+
+  .calc-btn { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ddd; background: #fff; font-size: 15px; font-weight: 500; color: #1a1a1a; cursor: pointer; margin-bottom: 1rem; transition: background 0.15s; }
+  .calc-btn:hover { background: #f5f5f5; }
+  .note { font-size: 12px; color: #bbb; margin-top: 1rem; line-height: 1.7; }
+  code { background: #f0f0f0; padding: 1px 5px; border-radius: 3px; font-size: 11px; }
+  details { margin-top: 1.25rem; }
+  summary { font-size: 13px; color: #aaa; cursor: pointer; user-select: none; }
+  .coef-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 1rem; }
+  .coef-table th { text-align: left; color: #888; font-weight: 500; padding: 4px 8px; border-bottom: 1px solid #eee; }
+  .coef-table td { padding: 5px 8px; color: #1a1a1a; }
+  hr { border: none; border-top: 1px solid #eee; margin: 1.5rem 0; }
+  .legend-row { display: flex; gap: 16px; font-size: 11px; color: #aaa; margin-top: 6px; align-items: center; }
+  .legend-dot { width: 10px; height: 5px; border-radius: 3px; display: inline-block; }
+</style>
+</head>
+<body>
+<div class="calc-wrap">
+  <h1>列线图临床预测模型计算器</h1>
+  <p class="subtitle">基于 rms::lrm · 积分显示与 regplot(center=TRUE) 列线图完全一致</p>
+
+  <p class="section-label">临床指标输入</p>
+
+  <!-- 晕厥史 -->
+  <div class="field-group">
+    <div class="field-header">
+      <div class="field-label">晕厥史 <span class="unit">是否有晕厥发作史</span></div>
+      <span class="score-pill" id="score-sync">— 分</span>
+    </div>
+    <div class="toggle-row">
+      <button class="toggle-btn active" id="sync-0" onclick="setToggle('sync',0)">否（0）</button>
+      <button class="toggle-btn" id="sync-1" onclick="setToggle('sync',1)">是（1）</button>
+    </div>
+  </div>
+
+  <!-- 高血压 -->
+  <div class="field-group">
+    <div class="field-header">
+      <div class="field-label">高血压 <span class="unit">是否诊断高血压</span></div>
+      <span class="score-pill" id="score-hyp">— 分</span>
+    </div>
+    <div class="toggle-row">
+      <button class="toggle-btn active" id="hyp-0" onclick="setToggle('hyp',0)">否（0）</button>
+      <button class="toggle-btn" id="hyp-1" onclick="setToggle('hyp',1)">是（1）</button>
+    </div>
+  </div>
+
+  <!-- LAVImax/a' -->
+  <div class="field-group">
+    <div class="field-header">
+      <div class="field-label">LAVImax/a' <span class="unit">mL/m²/cm/s</span></div>
+      <span class="score-pill" id="score-lavi">— 分</span>
+    </div>
+    <div class="slider-row">
+      <input type="range" id="lavi" min="0" max="45" step="0.1" value="5" oninput="onSlider('lavi','lavi-out',1)">
+      <span class="slider-val" id="lavi-out">5.0</span>
+    </div>
+  </div>
+
+  <!-- LASI -->
+  <div class="field-group">
+    <div class="field-header">
+      <div class="field-label">LASI <span class="unit">左心房应变指数</span></div>
+      <span class="score-pill" id="score-lasi">— 分</span>
+    </div>
+    <div class="slider-row">
+      <input type="range" id="lasi" min="0" max="4.5" step="0.01" value="1" oninput="onSlider('lasi','lasi-out',2)">
+      <span class="slider-val" id="lasi-out">1.00</span>
+    </div>
+  </div>
+
+  <!-- 左心室前壁基底段厚度 -->
+  <div class="field-group">
+    <div class="field-header">
+      <div class="field-label">左心室前壁基底段厚度 <span class="unit">mm</span></div>
+      <span class="score-pill" id="score-lvwall">— 分</span>
+    </div>
+    <div class="slider-row">
+      <input type="range" id="lvwall" min="6" max="27" step="0.1" value="14" oninput="onSlider('lvwall','lvwall-out',1)">
+      <span class="slider-val" id="lvwall-out">14.0</span>
+    </div>
+  </div>
+
+  <button class="calc-btn" onclick="calculate()">&#x1F4CA; 计算预测概率</button>
+
+  <!-- Score breakdown table -->
+  <div class="score-table-wrap">
+    <table class="score-table">
+      <thead>
+        <tr>
+          <th>变量</th>
+          <th>当前值</th>
+          <th class="bar-cell">Points 轴位置</th>
+          <th class="right">得分（Points）</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>晕厥史</td>
+          <td id="sv-sync">—</td>
+          <td class="bar-cell"><div class="bar-bg"><div class="bar-base" id="bb-sync"></div><div class="bar-fill" id="sb-sync" style="width:0%"></div></div></td>
+          <td class="right" id="sc-sync">—</td>
+        </tr>
+        <tr>
+          <td>高血压</td>
+          <td id="sv-hyp">—</td>
+          <td class="bar-cell"><div class="bar-bg"><div class="bar-base" id="bb-hyp"></div><div class="bar-fill" id="sb-hyp" style="width:0%"></div></div></td>
+          <td class="right" id="sc-hyp">—</td>
+        </tr>
+        <tr>
+          <td>LAVImax/a'</td>
+          <td id="sv-lavi">—</td>
+          <td class="bar-cell"><div class="bar-bg"><div class="bar-base" id="bb-lavi"></div><div class="bar-fill" id="sb-lavi" style="width:0%"></div></div></td>
+          <td class="right" id="sc-lavi">—</td>
+        </tr>
+        <tr>
+          <td>LASI</td>
+          <td id="sv-lasi">—</td>
+          <td class="bar-cell"><div class="bar-bg"><div class="bar-base" id="bb-lasi"></div><div class="bar-fill" id="sb-lasi" style="width:0%"></div></div></td>
+          <td class="right" id="sc-lasi">—</td>
+        </tr>
+        <tr>
+          <td>左心室前壁基底段厚度</td>
+          <td id="sv-lvwall">—</td>
+          <td class="bar-cell"><div class="bar-bg"><div class="bar-base" id="bb-lvwall"></div><div class="bar-fill" id="sb-lvwall" style="width:0%"></div></div></td>
+          <td class="right" id="sc-lvwall">—</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr class="total-row">
+          <td colspan="3">Total points <span class="total-sub">（与列线图 Total points 轴一致）</span></td>
+          <td class="right" id="sc-total">—</td>
+        </tr>
+      </tfoot>
+    </table>
+    <div class="legend-row">
+      <span><span class="legend-dot" style="background:#d0d9f0"></span> 基线偏移（center=TRUE）</span>
+      <span><span class="legend-dot" style="background:#1a6fc4"></span> 当前值贡献</span>
+    </div>
+  </div>
+
+  <!-- Result -->
+  <div class="result-card">
+    <div>
+      <div class="prob-big" id="prob-display">—</div>
+      <div class="prob-label">预测结局概率 Pr(结局)</div>
+    </div>
+    <div class="result-right">
+      <span class="risk-badge" id="risk-badge" style="background:#eee;color:#888">尚未计算</span>
+      <div class="logit-bar-wrap"><div class="logit-bar" id="logit-bar" style="width:0%;background:#ccc"></div></div>
+      <div class="detail-row" id="detail-chips"></div>
+    </div>
+  </div>
+
+  <details>
+    <summary>积分方法说明 &amp; 模型系数</summary>
+    <p style="font-size:13px;color:#666;margin:1rem 0 0.75rem;line-height:1.7">
+      得分显示采用 <code>regplot(center=TRUE)</code> 的 Points 轴绝对位置：<br>
+      <strong>显示 Points = round( S × β × (x − x_min) + baseline )</strong><br>
+      其中二分类变量 baseline = 20（regplot 居中排版），连续变量 baseline = 0<br>
+      S = 16.678（来自 R nomogram 输出）<br><br>
+      Total points 与列线图一致：连续值加总 + 50.89 后四舍五入<br>
+      概率由精确 logit 直接计算：<code>Pr = 1 / (1 + exp(−logit))</code><br><br>
+      验证：晕厥史=1(<b>46</b>) + 高血压=1(<b>37</b>) + LAVImax/a'=5(<b>9</b>) + LASI=1(<b>22</b>) + 前壁=14(<b>22</b>)<br>
+      → Total = <b>148</b>，Pr = <b>0.818</b> ✓
+    </p>
+    <table class="coef-table">
+      <thead>
+        <tr><th>变量</th><th>β 系数</th><th>x_min</th><th>x_max</th><th>baseline</th><th>满分 Points</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>截距</td><td>−5.3208</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+        <tr><td>晕厥史</td><td>1.5744</td><td>0</td><td>1</td><td>20</td><td>46</td></tr>
+        <tr><td>高血压</td><td>1.0187</td><td>0</td><td>1</td><td>20</td><td>37</td></tr>
+        <tr><td>LAVImax/a'</td><td>0.1117</td><td>0</td><td>45</td><td>0</td><td>84</td></tr>
+        <tr><td>LASI</td><td>1.3324</td><td>0</td><td>4.5</td><td>0</td><td>100</td></tr>
+        <tr><td>左心室前壁基底段厚度</td><td>0.1673</td><td>6</td><td>27</td><td>0</td><td>56</td></tr>
+      </tbody>
+    </table>
+  </details>
+
+  <p class="note">
+    预测结果仅供临床参考，不作为独立诊断依据。<br>
+    得分为四舍五入整数，与列线图刻度一致；概率由精确 logit 计算。
+  </p>
+</div>
+
+<script>
+  const state = { sync: 0, hyp: 0 };
+
+  const INTERCEPT = -5.3208078;
+  const S         = 16.67837;
+  const OFFSET    = 50.8902;
+
+  /*
+   * baseline：regplot(center=TRUE) 中各变量 x_min 对应的 Points 轴位置
+   * 二分类变量（晕厥史、高血压）：baseline = 20（regplot 居中排版偏移）
+   * 连续变量：baseline = 0（从 Points 轴起点开始）
+   *
+   * 验证（与列线图红点完全一致）：
+   *   晕厥史=1  → round(16.678×1.5744×1 + 20) = round(46.26) = 46 ✓
+   *   高血压=1  → round(16.678×1.0187×1 + 20) = round(36.99) = 37 ✓
+   *   LAVImax=5 → round(16.678×0.1117×5 +  0) = round(9.32)  =  9 ✓
+   *   LASI=1    → round(16.678×1.3324×1 +  0) = round(22.22) = 22 ✓
+   *   前壁=14   → round(16.678×0.1673×8 +  0) = round(22.32) = 22 ✓
+   */
+  const VARS = [
+    { key: 'sync',   label: '晕厥史',             b: 1.5744337, xmin: 0, maxPts: 100, baseline: 20 },
+    { key: 'hyp',    label: '高血压',              b: 1.0186898, xmin: 0, maxPts: 100, baseline: 20 },
+    { key: 'lavi',   label: "LAVImax/a'",          b: 0.1117027, xmin: 0, maxPts: 100, baseline:  0 },
+    { key: 'lasi',   label: 'LASI',                b: 1.3323981, xmin: 0, maxPts: 100, baseline:  0 },
+    { key: 'lvwall', label: '左心室前壁基底段厚度', b: 0.1673079, xmin: 6, maxPts: 100, baseline:  0 },
+  ];
+
+  function setToggle(key, val) {
+    state[key] = val;
+    document.getElementById(key + '-' + val).classList.add('active');
+    document.getElementById(key + '-' + (1 - val)).classList.remove('active');
+    calculate();
+  }
+
+  function onSlider(id, outId, dec) {
+    document.getElementById(outId).textContent =
+      parseFloat(document.getElementById(id).value).toFixed(dec);
+    calculate();
+  }
+
+  function getRawValues() {
+    return {
+      sync:   state.sync,
+      hyp:    state.hyp,
+      lavi:   parseFloat(document.getElementById('lavi').value),
+      lasi:   parseFloat(document.getElementById('lasi').value),
+      lvwall: parseFloat(document.getElementById('lvwall').value),
+    };
+  }
+
+  function calculate() {
+    const raw = getRawValues();
+    let ptsSumCont = 0;  // 用于 Total points（不含 baseline）
+
+    VARS.forEach(v => {
+      const deltaPts  = S * v.b * (raw[v.key] - v.xmin);   // 纯贡献（无 baseline）
+      const dispPts   = Math.round(deltaPts + v.baseline);   // 显示值（含 baseline）
+      ptsSumCont += deltaPts;
+
+      /* 输入区小标签 */
+      document.getElementById('score-' + v.key).textContent = dispPts + ' 分';
+
+      /* 汇总表：当前值 */
+      document.getElementById('sv-' + v.key).textContent =
+        (v.key === 'sync' || v.key === 'hyp')
+          ? (raw[v.key] === 1 ? '是' : '否')
+          : raw[v.key].toFixed(v.key === 'lasi' ? 2 : 1);
+
+      /* 汇总表：得分列 */
+      document.getElementById('sc-' + v.key).textContent = dispPts;
+
+      /* 进度条：baseline部分（灰蓝）+ 当前值贡献部分（蓝）*/
+      const totalMax  = 100;  // Points 轴 0-100
+      const basePct   = Math.min(v.baseline / totalMax * 100, 100);
+      const deltaPct  = Math.min(Math.max(deltaPts / totalMax * 100, 0), 100 - basePct);
+      document.getElementById('bb-' + v.key).style.width = basePct.toFixed(1) + '%';
+      document.getElementById('sb-' + v.key).style.width = (basePct + deltaPct).toFixed(1) + '%';
+      document.getElementById('sb-' + v.key).style.left  = '0';
+    });
+
+    /* Total points：纯贡献之和 + OFFSET，四舍五入 */
+    const totalPts = Math.round(ptsSumCont + OFFSET);
+    document.getElementById('sc-total').textContent = totalPts;
+
+    /* 概率 */
+    const logit = INTERCEPT + VARS.reduce((s, v) => s + v.b * raw[v.key], 0);
+    const prob  = 1 / (1 + Math.exp(-logit));
+    const pct   = (prob * 100).toFixed(1);
+
+    document.getElementById('prob-display').textContent = pct + '%';
+
+    const bar   = document.getElementById('logit-bar');
+    const badge = document.getElementById('risk-badge');
+    bar.style.width = Math.min(prob * 100, 100) + '%';
+
+    if (prob < 0.2) {
+      badge.className = 'risk-badge risk-low';  badge.textContent = '低风险';
+      bar.style.background = '#2e7d32';
+    } else if (prob < 0.5) {
+      badge.className = 'risk-badge risk-mid';  badge.textContent = '中等风险';
+      bar.style.background = '#f57c00';
+    } else {
+      badge.className = 'risk-badge risk-high'; badge.textContent = '高风险';
+      bar.style.background = '#c62828';
+    }
+
+    document.getElementById('detail-chips').innerHTML = `
+      <span class="detail-chip">log-odds ${logit.toFixed(3)}</span>
+      <span class="detail-chip">OR ${Math.exp(logit).toFixed(2)}</span>
+      <span class="detail-chip">Total pts ${totalPts}</span>
+    `;
+  }
+
+  calculate();
+</script>
+</body>
+</html>
